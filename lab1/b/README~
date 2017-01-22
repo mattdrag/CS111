@@ -1,0 +1,33 @@
+README
+
+///////////////////////////////////////////////////////////////////////////////\
+/////////////
+
+Files Included:
+
+lab1a.c:
+The c source code for lab1a, will set the terminal to character-at-a-time non-c\
+anonical mode,
+and read (one character at a time) from stdin and write to stdout.
+Complete with one flags:
+--shell: creates another process, which executes bash ("!/bin/bash"), creating \
+a shell. Also
+pipes input from the terminal to the shell, and pipes output from the shell to \
+stdout in the
+terminal.
+
+Makefile:
+A simple make file for lab1a as described in the spec, includes the following t\
+argets:
+all: compiles lab1a.c into an executable named lab1a
+clean: removes any files created by Makefile
+dist: creates a tarball with lab1a.c, the Makefile, and the README
+
+///////////////////////////////////////////////////////////////////////////////\
+////////////////
+
+Credit:
+
+Some of my code was modeled after code by my TA in discussion section, and piaz\
+za discussion
+also helped, specifically on code relating to pipes and termios functions.

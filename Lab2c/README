@@ -1,0 +1,1406 @@
+UCLA CS111 Project 2c
+Ying Bin Wu
+104485521
+Spring 2016
+
+++++++++++++++
+Files Included
+++++++++++++++
+lab2c.c - C file that contains the source code for the program. It supports the long options --yield=[ids], --threads=<# threads>, --iterations=<# iterations>, --lists=<# lists>, and --sync=<sync mechanism> 
+SortedList.h - a header file containing the declaration of the Linked list methods: insert, delete, lookup, and length
+SortedList.c - the C file that contains the cource code for the program. It contains the implementations of the insert, delete, lookup, and add function
+Makefile - file that makes the program. Can also clean the executable made and also make the submission file.
+README - (this file) describes what I did for project 2c and its limitations/features/testing methodology/etc
+graph.png - graph of the number of lists vs the cost per operation
+
+++++++++
+Features
+++++++++
+My program takes a number of threads to create and a number of iterations each thread should insert/delete from shared lists.
+The syncing mechanism can be specified by the --sync option.
+It also supports the --yield option which relinquishes the CPU with each iteration.
+
++++++++
+Testing
++++++++
+To test my program, I worked incrementally and tested it as I added new features such as adding support for the --yield option and the --sync option.
+
+++++++++++
+References
+++++++++++
+I refered to my TA, Zhaoxing's notes when doing the project. I also went to Theano's discussion section and referred to her notes when doing the assignment.
+
+++++++++++++++++++++++++++++
+Answers to project questions
+++++++++++++++++++++++++++++
+Q2C.1A
+As the number of threads per list goes up, the cost per operation increases since we have more conflicts with more threads trying to operate on the same lists. With more lists, thus a lower threads per list ratio, the size of each list goes down and the operations on the lists don't take as long, thus the cost per operation is lowered.
+
+Q2C.1B
+Threads per list is a better measure than threads for this particular measurement since it allows us to understand how "parallel" the workload is. With more lists, each with its own lock, we decrease the starvation of the thread. As the number of threads per list increase, each thread experiences more starvation, thus the time per operation increases since the threads waste time waiting.
+
+Q2C.2A
+When we increase the number of lists, the time per operation goes down. This is because the size of each list decreases, leading to faster operations on the lists, and because each thread is straved less, thus not wasting time simply waiting for a resource.
+
+Q2C.2B
+The cost per operation seems to be better for mutexes than it is for spinlocks. This maybe because of the memory contention problem presented when dealing with spinlocks.
+
+Q2C.3A
+Since pthread_cond_wait releases the lock, the lock held first. This is designed so that another thread can aquire the lock and process some data, and when its done processing the data, it can signal the condition variable to release the lock, which can then use the processed data.
+
+Q2C.3B
+If the mutex is not released when the waiting thread is blocked, it will result in a deadlock if another thread attempts to aquire the mutex.
+
+Q2C.3C
+The mutex must be required when the calling thread resumes since it guarentees that nothing accesses the data that the calling thread intended to use. It also makes sure that the condition variable isn't accessed by other threads.
+
+Q2C.3D
+If the mutex release is done outside of pthread_cond_wait, there is a chance the CPU will preempt the thread right after it has releases the lock and before it calls pthread_cond_wait, thus allowing for another thread to modify some data that the initial thread was using. This would result in a race condition.
+
+Q2C.3E
+pthread_cond_wait can be implemented in user mode. This is possible if we can atomically release the mutex and block the calling thread. 
+
+
+
+++++++++++++
+gprof output
+++++++++++++
+2K iterations 1 thread 1 list
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+100.19      0.01     0.01     2000     5.01     5.01  SortedList_insert
+  0.00      0.01     0.00     4000     0.00     0.00  hash
+  0.00      0.01     0.00     2000     0.00     0.00  SortedList_delete
+  0.00      0.01     0.00     2000     0.00     0.00  SortedList_lookup
+  0.00      0.01     0.00     2000     0.00     5.01  insert
+  0.00      0.01     0.00     2000     0.00     0.00  lookup_and_delete
+  0.00      0.01     0.00        2     0.00     0.00  SortedList_length
+  0.00      0.01     0.00        2     0.00     0.00  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 99.81% of 0.01 seconds
+
+index % time    self  children    called     name
+                0.01    0.00    2000/2000        insert [2]
+[1]    100.0    0.01    0.00    2000         SortedList_insert [1]
+-----------------------------------------------
+                0.00    0.01    2000/2000        thread_function [3]
+[2]    100.0    0.00    0.01    2000         insert [2]
+                0.01    0.00    2000/2000        SortedList_insert [1]
+                0.00    0.00    2000/4000        hash [4]
+-----------------------------------------------
+                                                 <spontaneous>
+[3]    100.0    0.00    0.01                 thread_function [3]
+                0.00    0.01    2000/2000        insert [2]
+                0.00    0.00    2000/2000        lookup_and_delete [7]
+                0.00    0.00       1/2           getLength [9]
+-----------------------------------------------
+                0.00    0.00    2000/4000        insert [2]
+                0.00    0.00    2000/4000        lookup_and_delete [7]
+[4]      0.0    0.00    0.00    4000         hash [4]
+-----------------------------------------------
+                0.00    0.00    2000/2000        lookup_and_delete [7]
+[5]      0.0    0.00    0.00    2000         SortedList_delete [5]
+-----------------------------------------------
+                0.00    0.00    2000/2000        lookup_and_delete [7]
+[6]      0.0    0.00    0.00    2000         SortedList_lookup [6]
+-----------------------------------------------
+                0.00    0.00    2000/2000        thread_function [3]
+[7]      0.0    0.00    0.00    2000         lookup_and_delete [7]
+                0.00    0.00    2000/4000        hash [4]
+                0.00    0.00    2000/2000        SortedList_lookup [6]
+                0.00    0.00    2000/2000        SortedList_delete [5]
+-----------------------------------------------
+                0.00    0.00       2/2           getLength [9]
+[8]      0.0    0.00    0.00       2         SortedList_length [8]
+-----------------------------------------------
+                0.00    0.00       1/2           main [15]
+                0.00    0.00       1/2           thread_function [3]
+[9]      0.0    0.00    0.00       2         getLength [9]
+                0.00    0.00       2/2           SortedList_length [8]
+-----------------------------------------------
+
+
+
+4K iterations 1 thread 1 list
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 80.15      0.04     0.04     4000    10.02    10.02  SortedList_lookup
+ 20.04      0.05     0.01     4000     2.50     2.50  SortedList_insert
+  0.00      0.05     0.00     8000     0.00     0.00  hash
+  0.00      0.05     0.00     4000     0.00     0.00  SortedList_delete
+  0.00      0.05     0.00     4000     0.00     2.50  insert
+  0.00      0.05     0.00     4000     0.00    10.02  lookup_and_delete
+  0.00      0.05     0.00        2     0.00     0.00  SortedList_length
+  0.00      0.05     0.00        2     0.00     0.00  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 19.96% of 0.05 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00    0.05                 thread_function [1]
+                0.00    0.04    4000/4000        lookup_and_delete [3]
+                0.00    0.01    4000/4000        insert [5]
+                0.00    0.00       1/2           getLength [9]
+-----------------------------------------------
+                0.04    0.00    4000/4000        lookup_and_delete [3]
+[2]     80.0    0.04    0.00    4000         SortedList_lookup [2]
+-----------------------------------------------
+                0.00    0.04    4000/4000        thread_function [1]
+[3]     80.0    0.00    0.04    4000         lookup_and_delete [3]
+                0.04    0.00    4000/4000        SortedList_lookup [2]
+                0.00    0.00    4000/8000        hash [6]
+                0.00    0.00    4000/4000        SortedList_delete [7]
+-----------------------------------------------
+                0.01    0.00    4000/4000        insert [5]
+[4]     20.0    0.01    0.00    4000         SortedList_insert [4]
+-----------------------------------------------
+                0.00    0.01    4000/4000        thread_function [1]
+[5]     20.0    0.00    0.01    4000         insert [5]
+                0.01    0.00    4000/4000        SortedList_insert [4]
+                0.00    0.00    4000/8000        hash [6]
+-----------------------------------------------
+                0.00    0.00    4000/8000        insert [5]
+                0.00    0.00    4000/8000        lookup_and_delete [3]
+[6]      0.0    0.00    0.00    8000         hash [6]
+-----------------------------------------------
+                0.00    0.00    4000/4000        lookup_and_delete [3]
+[7]      0.0    0.00    0.00    4000         SortedList_delete [7]
+-----------------------------------------------
+                0.00    0.00       2/2           getLength [9]
+[8]      0.0    0.00    0.00       2         SortedList_length [8]
+-----------------------------------------------
+                0.00    0.00       1/2           main [15]
+                0.00    0.00       1/2           thread_function [1]
+[9]      0.0    0.00    0.00       2         getLength [9]
+                0.00    0.00       2/2           SortedList_length [8]
+-----------------------------------------------10K iterations
+
+
+
+8K iterations 1 thread 1 list
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 71.56      0.10     0.10     8000    12.52    12.52  SortedList_lookup
+ 28.63      0.14     0.04     8000     5.01     5.01  SortedList_insert
+  0.00      0.14     0.00    16000     0.00     0.00  hash
+  0.00      0.14     0.00     8000     0.00     0.00  SortedList_delete
+  0.00      0.14     0.00     8000     0.00     5.01  insert
+  0.00      0.14     0.00     8000     0.00    12.52  lookup_and_delete
+  0.00      0.14     0.00        2     0.00     0.00  SortedList_length
+  0.00      0.14     0.00        2     0.00     0.00  getLength
+
+		     Call graph (explanation follows)
+granularity: each sample hit covers 2 byte(s) for 7.13% of 0.14 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00    0.14                 thread_function [1]
+                0.00    0.10    8000/8000        lookup_and_delete [3]
+                0.00    0.04    8000/8000        insert [5]
+                0.00    0.00       1/2           getLength [9]
+-----------------------------------------------
+                0.10    0.00    8000/8000        lookup_and_delete [3]
+[2]     71.4    0.10    0.00    8000         SortedList_lookup [2]
+-----------------------------------------------
+                0.00    0.10    8000/8000        thread_function [1]
+[3]     71.4    0.00    0.10    8000         lookup_and_delete [3]
+                0.10    0.00    8000/8000        SortedList_lookup [2]
+                0.00    0.00    8000/16000       hash [6]
+                0.00    0.00    8000/8000        SortedList_delete [7]
+-----------------------------------------------
+                0.04    0.00    8000/8000        insert [5]
+[4]     28.6    0.04    0.00    8000         SortedList_insert [4]
+-----------------------------------------------
+                0.00    0.04    8000/8000        thread_function [1]
+[5]     28.6    0.00    0.04    8000         insert [5]
+                0.04    0.00    8000/8000        SortedList_insert [4]
+                0.00    0.00    8000/16000       hash [6]
+-----------------------------------------------
+                0.00    0.00    8000/16000       insert [5]
+                0.00    0.00    8000/16000       lookup_and_delete [3]
+[6]      0.0    0.00    0.00   16000         hash [6]
+-----------------------------------------------
+                0.00    0.00    8000/8000        lookup_and_delete [3]
+[7]      0.0    0.00    0.00    8000         SortedList_delete [7]
+-----------------------------------------------
+                0.00    0.00       2/2           getLength [9]
+[8]      0.0    0.00    0.00       2         SortedList_length [8]
+-----------------------------------------------
+                0.00    0.00       1/2           main [15]
+                0.00    0.00       1/2           thread_function [1]
+[9]      0.0    0.00    0.00       2         getLength [9]
+                0.00    0.00       2/2           SortedList_length [8]
+-----------------------------------------------
+
+10k Iterations 1 Thread 1 List
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 51.71      0.16     0.16    10000    16.03    16.03  SortedList_insert
+ 48.48      0.31     0.15    10000    15.03    15.03  SortedList_lookup
+  0.00      0.31     0.00    20000     0.00     0.00  hash
+  0.00      0.31     0.00    10000     0.00     0.00  SortedList_delete
+  0.00      0.31     0.00    10000     0.00    16.03  insert
+  0.00      0.31     0.00    10000     0.00    15.03  lookup_and_delete
+  0.00      0.31     0.00        2     0.00     0.00  SortedList_length
+  0.00      0.31     0.00        2     0.00     0.00  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 3.22% of 0.31 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00    0.31                 thread_function [1]
+                0.00    0.16   10000/10000       insert [3]
+                0.00    0.15   10000/10000       lookup_and_delete [5]
+                0.00    0.00       1/2           getLength [9]
+-----------------------------------------------
+                0.16    0.00   10000/10000       insert [3]
+[2]     51.6    0.16    0.00   10000         SortedList_insert [2]
+-----------------------------------------------
+                0.00    0.16   10000/10000       thread_function [1]
+[3]     51.6    0.00    0.16   10000         insert [3]
+                0.16    0.00   10000/10000       SortedList_insert [2]
+                0.00    0.00   10000/20000       hash [6]
+-----------------------------------------------
+                0.15    0.00   10000/10000       lookup_and_delete [5]
+[4]     48.4    0.15    0.00   10000         SortedList_lookup [4]
+-----------------------------------------------
+                0.00    0.15   10000/10000       thread_function [1]
+[5]     48.4    0.00    0.15   10000         lookup_and_delete [5]
+                0.15    0.00   10000/10000       SortedList_lookup [4]
+                0.00    0.00   10000/20000       hash [6]
+                0.00    0.00   10000/10000       SortedList_delete [7]
+-----------------------------------------------
+                0.00    0.00   10000/20000       insert [3]
+                0.00    0.00   10000/20000       lookup_and_delete [5]
+[6]      0.0    0.00    0.00   20000         hash [6]
+-----------------------------------------------
+                0.00    0.00   10000/10000       lookup_and_delete [5]
+[7]      0.0    0.00    0.00   10000         SortedList_delete [7]
+-----------------------------------------------
+                0.00    0.00       2/2           getLength [9]
+[8]      0.0    0.00    0.00       2         SortedList_length [8]
+-----------------------------------------------
+                0.00    0.00       1/2           main [15]
+                0.00    0.00       1/2           thread_function [1]
+[9]      0.0    0.00    0.00       2         getLength [9]
+                0.00    0.00       2/2           SortedList_length [8]
+-----------------------------------------------
+
+
+20K iterations 1 thread 1 list
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 58.39      0.95     0.95    20000    47.59    47.59  SortedList_lookup
+ 41.80      1.63     0.68    20000    34.06    34.06  SortedList_insert
+  0.00      1.63     0.00    40000     0.00     0.00  hash
+  0.00      1.63     0.00    20000     0.00     0.00  SortedList_delete
+  0.00      1.63     0.00    20000     0.00    34.06  insert
+  0.00      1.63     0.00    20000     0.00    47.59  lookup_and_delete
+  0.00      1.63     0.00        2     0.00     0.00  SortedList_length
+  0.00      1.63     0.00        2     0.00     0.00  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.61% of 1.63 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00    1.63                 thread_function [1]
+                0.00    0.95   20000/20000       lookup_and_delete [3]
+                0.00    0.68   20000/20000       insert [5]
+                0.00    0.00       1/2           getLength [9]
+-----------------------------------------------
+                0.95    0.00   20000/20000       lookup_and_delete [3]
+[2]     58.3    0.95    0.00   20000         SortedList_lookup [2]
+-----------------------------------------------
+                0.00    0.95   20000/20000       thread_function [1]
+[3]     58.3    0.00    0.95   20000         lookup_and_delete [3]
+                0.95    0.00   20000/20000       SortedList_lookup [2]
+                0.00    0.00   20000/40000       hash [6]
+                0.00    0.00   20000/20000       SortedList_delete [7]
+-----------------------------------------------
+                0.68    0.00   20000/20000       insert [5]
+[4]     41.7    0.68    0.00   20000         SortedList_insert [4]
+-----------------------------------------------
+                0.00    0.68   20000/20000       thread_function [1]
+[5]     41.7    0.00    0.68   20000         insert [5]
+                0.68    0.00   20000/20000       SortedList_insert [4]
+                0.00    0.00   20000/40000       hash [6]
+-----------------------------------------------
+                0.00    0.00   20000/40000       insert [5]
+                0.00    0.00   20000/40000       lookup_and_delete [3]
+[6]      0.0    0.00    0.00   40000         hash [6]
+-----------------------------------------------
+                0.00    0.00   20000/20000       lookup_and_delete [3]
+[7]      0.0    0.00    0.00   20000         SortedList_delete [7]
+-----------------------------------------------
+                0.00    0.00       2/2           getLength [9]
+[8]      0.0    0.00    0.00       2         SortedList_length [8]
+-----------------------------------------------
+                0.00    0.00       1/2           main [15]
+                0.00    0.00       1/2           thread_function [1]
+[9]      0.0    0.00    0.00       2         getLength [9]
+                0.00    0.00       2/2           SortedList_length [8]
+-----------------------------------------------
+
+
+40k iterations 1 thread 1 list
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 54.90      4.24     4.24    40000   105.95   105.95  SortedList_lookup
+ 45.29      7.73     3.50    40000    87.42    87.42  SortedList_insert
+  0.00      7.73     0.00    80000     0.00     0.00  hash
+  0.00      7.73     0.00    40000     0.00     0.00  SortedList_delete
+  0.00      7.73     0.00    40000     0.00    87.42  insert
+  0.00      7.73     0.00    40000     0.00   105.95  lookup_and_delete
+  0.00      7.73     0.00        2     0.00     0.00  SortedList_length
+  0.00      7.73     0.00        2     0.00     0.00  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.13% of 7.73 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00    7.73                 thread_function [1]
+                0.00    4.24   40000/40000       lookup_and_delete [3]
+                0.00    3.50   40000/40000       insert [5]
+                0.00    0.00       1/2           getLength [9]
+-----------------------------------------------
+                4.24    0.00   40000/40000       lookup_and_delete [3]
+[2]     54.8    4.24    0.00   40000         SortedList_lookup [2]
+-----------------------------------------------
+                0.00    4.24   40000/40000       thread_function [1]
+[3]     54.8    0.00    4.24   40000         lookup_and_delete [3]
+                4.24    0.00   40000/40000       SortedList_lookup [2]
+                0.00    0.00   40000/80000       hash [6]
+                0.00    0.00   40000/40000       SortedList_delete [7]
+-----------------------------------------------
+                3.50    0.00   40000/40000       insert [5]
+[4]     45.2    3.50    0.00   40000         SortedList_insert [4]
+-----------------------------------------------
+                0.00    3.50   40000/40000       thread_function [1]
+[5]     45.2    0.00    3.50   40000         insert [5]
+                3.50    0.00   40000/40000       SortedList_insert [4]
+                0.00    0.00   40000/80000       hash [6]
+-----------------------------------------------
+                0.00    0.00   40000/80000       insert [5]
+                0.00    0.00   40000/80000       lookup_and_delete [3]
+[6]      0.0    0.00    0.00   80000         hash [6]
+-----------------------------------------------
+                0.00    0.00   40000/40000       lookup_and_delete [3]
+[7]      0.0    0.00    0.00   40000         SortedList_delete [7]
+-----------------------------------------------
+                0.00    0.00       2/2           getLength [9]
+[8]      0.0    0.00    0.00       2         SortedList_length [8]
+-----------------------------------------------
+                0.00    0.00       1/2           main [15]
+                0.00    0.00       1/2           thread_function [1]
+[9]      0.0    0.00    0.00       2         getLength [9]
+                0.00    0.00       2/2           SortedList_length [8]
+-----------------------------------------------
+
+
+100k iterations 1 thread 1 list
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 55.36     20.07    20.07   100000   200.68   200.68  SortedList_lookup
+ 44.83     36.32    16.25   100000   162.51   162.51  SortedList_insert
+  0.00     36.32     0.00   200000     0.00     0.00  hash
+  0.00     36.32     0.00   100000     0.00     0.00  SortedList_delete
+  0.00     36.32     0.00   100000     0.00   162.51  insert
+  0.00     36.32     0.00   100000     0.00   200.68  lookup_and_delete
+  0.00     36.32     0.00        2     0.00     0.00  SortedList_length
+  0.00     36.32     0.00        2     0.00     0.00  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.03% of 36.32 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00   36.32                 thread_function [1]
+                0.00   20.07  100000/100000      lookup_and_delete [3]
+                0.00   16.25  100000/100000      insert [5]
+                0.00    0.00       1/2           getLength [9]
+-----------------------------------------------
+               20.07    0.00  100000/100000      lookup_and_delete [3]
+[2]     55.3   20.07    0.00  100000         SortedList_lookup [2]
+-----------------------------------------------
+                0.00   20.07  100000/100000      thread_function [1]
+[3]     55.3    0.00   20.07  100000         lookup_and_delete [3]
+               20.07    0.00  100000/100000      SortedList_lookup [2]
+                0.00    0.00  100000/200000      hash [6]
+                0.00    0.00  100000/100000      SortedList_delete [7]
+-----------------------------------------------
+               16.25    0.00  100000/100000      insert [5]
+[4]     44.7   16.25    0.00  100000         SortedList_insert [4]
+-----------------------------------------------
+                0.00   16.25  100000/100000      thread_function [1]
+[5]     44.7    0.00   16.25  100000         insert [5]
+               16.25    0.00  100000/100000      SortedList_insert [4]
+                0.00    0.00  100000/200000      hash [6]
+-----------------------------------------------
+                0.00    0.00  100000/200000      insert [5]
+                0.00    0.00  100000/200000      lookup_and_delete [3]
+[6]      0.0    0.00    0.00  200000         hash [6]
+-----------------------------------------------
+                0.00    0.00  100000/100000      lookup_and_delete [3]
+[7]      0.0    0.00    0.00  100000         SortedList_delete [7]
+-----------------------------------------------
+                0.00    0.00       2/2           getLength [9]
+[8]      0.0    0.00    0.00       2         SortedList_length [8]
+-----------------------------------------------
+                0.00    0.00       1/2           main [15]
+                0.00    0.00       1/2           thread_function [1]
+[9]      0.0    0.00    0.00       2         getLength [9]
+                0.00    0.00       2/2           SortedList_length [8]
+-----------------------------------------------Flat profile:
+
+
+Mutex lock 10k iterations 8 threads 1 list
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 56.29     11.24    11.24    79998     0.14     0.14  SortedList_lookup
+ 43.80     19.99     8.75    79994     0.11     0.11  SortedList_insert
+  0.05     20.00     0.01        9     1.11     1.11  SortedList_length
+  0.05     20.01     0.01                             thread_function
+  0.00     20.01     0.00   159972     0.00     0.00  hash
+  0.00     20.01     0.00    80000     0.00     0.00  SortedList_delete
+  0.00     20.01     0.00    79992     0.00     0.14  lookup_and_delete
+  0.00     20.01     0.00    79972     0.00     0.11  insert
+  0.00     20.01     0.00        9     0.00     1.11  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.05% of 20.01 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.01   20.00                 thread_function [1]
+                0.00   11.24   79992/79992       lookup_and_delete [3]
+                0.00    8.75   79972/79972       insert [5]
+                0.00    0.01       8/9           getLength [7]
+-----------------------------------------------
+               11.24    0.00   79998/79998       lookup_and_delete [3]
+[2]     56.2   11.24    0.00   79998         SortedList_lookup [2]
+-----------------------------------------------
+                0.00   11.24   79992/79992       thread_function [1]
+[3]     56.2    0.00   11.24   79992         lookup_and_delete [3]
+               11.24    0.00   79998/79998       SortedList_lookup [2]
+                0.00    0.00   80000/80000       SortedList_delete [10]
+                0.00    0.00   79995/159972      hash [9]
+-----------------------------------------------
+                8.75    0.00   79994/79994       insert [5]
+[4]     43.7    8.75    0.00   79994         SortedList_insert [4]
+-----------------------------------------------
+                0.00    8.75   79972/79972       thread_function [1]
+[5]     43.7    0.00    8.75   79972         insert [5]
+                8.75    0.00   79994/79994       SortedList_insert [4]
+                0.00    0.00   79977/159972      hash [9]
+-----------------------------------------------
+                0.01    0.00       9/9           getLength [7]
+[6]      0.1    0.01    0.00       9         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [8]
+                0.00    0.01       8/9           thread_function [1]
+[7]      0.1    0.00    0.01       9         getLength [7]
+                0.01    0.00       9/9           SortedList_length [6]
+-----------------------------------------------
+                                                 <spontaneous>
+[8]      0.0    0.00    0.00                 main [8]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+                0.00    0.00   79977/159972      insert [5]
+                0.00    0.00   79995/159972      lookup_and_delete [3]
+[9]      0.0    0.00    0.00  159972         hash [9]
+-----------------------------------------------
+                0.00    0.00   80000/80000       lookup_and_delete [3]
+[10]     0.0    0.00    0.00   80000         SortedList_delete [10]
+-----------------------------------------------
+
+
+Mutex lock 10k iterations 8 threads 2 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 54.39      7.48     7.48    79653     0.09     0.09  SortedList_lookup
+ 45.44     13.74     6.25    79707     0.08     0.08  SortedList_insert
+  0.15     13.76     0.02       18     1.11     1.11  SortedList_length
+  0.07     13.77     0.01   159579     0.00     0.00  hash
+  0.07     13.78     0.01    79758     0.00     0.00  SortedList_delete
+  0.07     13.79     0.01    79618     0.00     0.09  lookup_and_delete
+  0.00     13.79     0.00    79816     0.00     0.08  insert
+  0.00     13.79     0.00        9     0.00     2.23  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.07% of 13.79 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00   13.78                 thread_function [1]
+                0.01    7.50   79618/79618       lookup_and_delete [2]
+                0.00    6.26   79816/79816       insert [4]
+                0.00    0.02       8/9           getLength [7]
+-----------------------------------------------
+                0.01    7.50   79618/79618       thread_function [1]
+[2]     54.5    0.01    7.50   79618         lookup_and_delete [2]
+                7.48    0.00   79653/79653       SortedList_lookup [3]
+                0.01    0.00   79758/79758       SortedList_delete [9]
+                0.01    0.00   79729/159579      hash [8]
+-----------------------------------------------
+                7.48    0.00   79653/79653       lookup_and_delete [2]
+[3]     54.3    7.48    0.00   79653         SortedList_lookup [3]
+-----------------------------------------------
+                0.00    6.26   79816/79816       thread_function [1]
+[4]     45.4    0.00    6.26   79816         insert [4]
+                6.25    0.00   79707/79707       SortedList_insert [5]
+                0.01    0.00   79850/159579      hash [8]
+-----------------------------------------------
+                6.25    0.00   79707/79707       insert [4]
+[5]     45.3    6.25    0.00   79707         SortedList_insert [5]
+-----------------------------------------------
+                0.02    0.00      18/18          getLength [7]
+[6]      0.1    0.02    0.00      18         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [10]
+                0.00    0.02       8/9           thread_function [1]
+[7]      0.1    0.00    0.02       9         getLength [7]
+                0.02    0.00      18/18          SortedList_length [6]
+-----------------------------------------------
+                0.01    0.00   79729/159579      lookup_and_delete [2]
+                0.01    0.00   79850/159579      insert [4]
+[8]      0.1    0.01    0.00  159579         hash [8]
+-----------------------------------------------
+                0.01    0.00   79758/79758       lookup_and_delete [2]
+[9]      0.1    0.01    0.00   79758         SortedList_delete [9]
+-----------------------------------------------
+                                                 <spontaneous>
+[10]     0.0    0.00    0.00                 main [10]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+
+
+
+Mutex lock 10k iterations 8 threads 4 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 53.20      3.78     3.78    78678     0.05     0.05  SortedList_lookup
+ 46.43      7.07     3.30    78884     0.04     0.04  SortedList_insert
+  0.28      7.09     0.02       36     0.56     0.56  SortedList_length
+  0.14      7.10     0.01    78589     0.00     0.05  lookup_and_delete
+  0.14      7.11     0.01                             thread_function
+  0.00      7.11     0.00   158141     0.00     0.00  hash
+  0.00      7.11     0.00    79094     0.00     0.04  insert
+  0.00      7.11     0.00    78798     0.00     0.00  SortedList_delete
+  0.00      7.11     0.00        9     0.00     2.23  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.14% of 7.11 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.01    7.10                 thread_function [1]
+                0.01    3.78   78589/78589       lookup_and_delete [2]
+                0.00    3.30   79094/79094       insert [4]
+                0.00    0.02       8/9           getLength [7]
+-----------------------------------------------
+                0.01    3.78   78589/78589       thread_function [1]
+[2]     53.2    0.01    3.78   78589         lookup_and_delete [2]
+                3.78    0.00   78678/78678       SortedList_lookup [3]
+                0.00    0.00   78930/158141      hash [9]
+                0.00    0.00   78798/78798       SortedList_delete [10]
+-----------------------------------------------
+                3.78    0.00   78678/78678       lookup_and_delete [2]
+[3]     53.1    3.78    0.00   78678         SortedList_lookup [3]
+-----------------------------------------------
+                0.00    3.30   79094/79094       thread_function [1]
+[4]     46.3    0.00    3.30   79094         insert [4]
+                3.30    0.00   78884/78884       SortedList_insert [5]
+                0.00    0.00   79211/158141      hash [9]
+-----------------------------------------------
+                3.30    0.00   78884/78884       insert [4]
+[5]     46.3    3.30    0.00   78884         SortedList_insert [5]
+-----------------------------------------------
+                0.02    0.00      36/36          getLength [7]
+[6]      0.3    0.02    0.00      36         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [8]
+                0.00    0.02       8/9           thread_function [1]
+[7]      0.3    0.00    0.02       9         getLength [7]
+                0.02    0.00      36/36          SortedList_length [6]
+-----------------------------------------------
+                                                 <spontaneous>
+[8]      0.0    0.00    0.00                 main [8]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+                0.00    0.00   78930/158141      lookup_and_delete [2]
+                0.00    0.00   79211/158141      insert [4]
+[9]      0.0    0.00    0.00  158141         hash [9]
+-----------------------------------------------
+                0.00    0.00   78798/78798       lookup_and_delete [2]
+[10]     0.0    0.00    0.00   78798         SortedList_delete [10]
+-----------------------------------------------
+
+
+Mutex lock 10k iterations 8 threads 8 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 55.20      2.00     2.00    75604     0.03     0.03  SortedList_lookup
+ 44.16      3.61     1.60    76968     0.02     0.02  SortedList_insert
+  0.55      3.63     0.02       71     0.28     0.28  SortedList_length
+  0.28      3.64     0.01    75779     0.00     0.00  SortedList_delete
+  0.00      3.64     0.00   153854     0.00     0.00  hash
+  0.00      3.64     0.00    77250     0.00     0.02  insert
+  0.00      3.64     0.00    75296     0.00     0.03  lookup_and_delete
+  0.00      3.64     0.00        9     0.00     2.23  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.27% of 3.64 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.9    0.00    3.63                 thread_function [1]
+                0.00    2.01   75296/75296       lookup_and_delete [2]
+                0.00    1.60   77250/77250       insert [4]
+                0.00    0.02       8/9           getLength [7]
+-----------------------------------------------
+                0.00    2.01   75296/75296       thread_function [1]
+[2]     55.4    0.00    2.01   75296         lookup_and_delete [2]
+                2.00    0.00   75604/75604       SortedList_lookup [3]
+                0.01    0.00   75779/75779       SortedList_delete [8]
+                0.00    0.00   76234/153854      hash [10]
+-----------------------------------------------
+                2.00    0.00   75604/75604       lookup_and_delete [2]
+[3]     55.1    2.00    0.00   75604         SortedList_lookup [3]
+-----------------------------------------------
+                0.00    1.60   77250/77250       thread_function [1]
+[4]     44.1    0.00    1.60   77250         insert [4]
+                1.60    0.00   76968/76968       SortedList_insert [5]
+                0.00    0.00   77620/153854      hash [10]
+-----------------------------------------------
+                1.60    0.00   76968/76968       insert [4]
+[5]     44.1    1.60    0.00   76968         SortedList_insert [5]
+-----------------------------------------------
+                0.02    0.00      71/71          getLength [7]
+[6]      0.6    0.02    0.00      71         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [9]
+                0.00    0.02       8/9           thread_function [1]
+[7]      0.6    0.00    0.02       9         getLength [7]
+                0.02    0.00      71/71          SortedList_length [6]
+-----------------------------------------------
+                0.01    0.00   75779/75779       lookup_and_delete [2]
+[8]      0.3    0.01    0.00   75779         SortedList_delete [8]
+-----------------------------------------------
+                                                 <spontaneous>
+[9]      0.1    0.00    0.00                 main [9]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+                0.00    0.00   76234/153854      lookup_and_delete [2]
+                0.00    0.00   77620/153854      insert [4]
+[10]     0.0    0.00    0.00  153854         hash [10]
+-----------------------------------------------
+
+
+Mutex lock 10k iterations 8 threads 16 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 52.76      0.99     0.99    70372     0.01     0.01  SortedList_lookup
+ 46.36      1.86     0.87    73421     0.01     0.01  SortedList_insert
+  1.07      1.88     0.02      141     0.14     0.14  SortedList_length
+  0.00      1.88     0.00   146261     0.00     0.00  hash
+  0.00      1.88     0.00    73905     0.00     0.01  insert
+  0.00      1.88     0.00    70556     0.00     0.00  SortedList_delete
+  0.00      1.88     0.00    69383     0.00     0.01  lookup_and_delete
+  0.00      1.88     0.00        9     0.00     2.23  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.53% of 1.88 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.9    0.00    1.88                 thread_function [1]
+                0.00    0.99   69383/69383       lookup_and_delete [3]
+                0.00    0.87   73905/73905       insert [4]
+                0.00    0.02       8/9           getLength [7]
+-----------------------------------------------
+                0.99    0.00   70372/70372       lookup_and_delete [3]
+[2]     52.7    0.99    0.00   70372         SortedList_lookup [2]
+-----------------------------------------------
+                0.00    0.99   69383/69383       thread_function [1]
+[3]     52.7    0.00    0.99   69383         lookup_and_delete [3]
+                0.99    0.00   70372/70372       SortedList_lookup [2]
+                0.00    0.00   71568/146261      hash [9]
+                0.00    0.00   70556/70556       SortedList_delete [10]
+-----------------------------------------------
+                0.00    0.87   73905/73905       thread_function [1]
+[4]     46.3    0.00    0.87   73905         insert [4]
+                0.87    0.00   73421/73421       SortedList_insert [5]
+                0.00    0.00   74693/146261      hash [9]
+-----------------------------------------------
+                0.87    0.00   73421/73421       insert [4]
+[5]     46.3    0.87    0.00   73421         SortedList_insert [5]
+-----------------------------------------------
+                0.02    0.00     141/141         getLength [7]
+[6]      1.1    0.02    0.00     141         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [8]
+                0.00    0.02       8/9           thread_function [1]
+[7]      1.1    0.00    0.02       9         getLength [7]
+                0.02    0.00     141/141         SortedList_length [6]
+-----------------------------------------------
+                                                 <spontaneous>
+[8]      0.1    0.00    0.00                 main [8]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+                0.00    0.00   71568/146261      lookup_and_delete [3]
+                0.00    0.00   74693/146261      insert [4]
+[9]      0.0    0.00    0.00  146261         hash [9]
+-----------------------------------------------
+                0.00    0.00   70556/70556       lookup_and_delete [3]
+[10]     0.0    0.00    0.00   70556         SortedList_delete [10]
+-----------------------------------------------
+
+
+
+Mutex lock 10k iterations 8 threads 32 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 48.98      0.44     0.44    61653     0.01     0.01  SortedList_lookup
+ 47.87      0.87     0.43    67101     0.01     0.01  SortedList_insert
+  2.23      0.89     0.02      277     0.07     0.07  SortedList_length
+  1.11      0.90     0.01   132276     0.00     0.00  hash
+  0.00      0.90     0.00    67558     0.00     0.01  insert
+  0.00      0.90     0.00    62869     0.00     0.00  SortedList_delete
+  0.00      0.90     0.00    60234     0.00     0.01  lookup_and_delete
+  0.00      0.90     0.00        9     0.00     2.23  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 1.11% of 0.90 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.8    0.00    0.90                 thread_function [1]
+                0.00    0.45   60234/60234       lookup_and_delete [2]
+                0.00    0.44   67558/67558       insert [4]
+                0.00    0.02       8/9           getLength [7]
+-----------------------------------------------
+                0.00    0.45   60234/60234       thread_function [1]
+[2]     49.4    0.00    0.45   60234         lookup_and_delete [2]
+                0.44    0.00   61653/61653       SortedList_lookup [3]
+                0.00    0.00   63501/132276      hash [8]
+                0.00    0.00   62869/62869       SortedList_delete [10]
+-----------------------------------------------
+                0.44    0.00   61653/61653       lookup_and_delete [2]
+[3]     48.9    0.44    0.00   61653         SortedList_lookup [3]
+-----------------------------------------------
+                0.00    0.44   67558/67558       thread_function [1]
+[4]     48.4    0.00    0.44   67558         insert [4]
+                0.43    0.00   67101/67101       SortedList_insert [5]
+                0.01    0.00   68775/132276      hash [8]
+-----------------------------------------------
+                0.43    0.00   67101/67101       insert [4]
+[5]     47.8    0.43    0.00   67101         SortedList_insert [5]
+-----------------------------------------------
+                0.02    0.00     277/277         getLength [7]
+[6]      2.2    0.02    0.00     277         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [9]
+                0.00    0.02       8/9           thread_function [1]
+[7]      2.2    0.00    0.02       9         getLength [7]
+                0.02    0.00     277/277         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00   63501/132276      lookup_and_delete [2]
+                0.01    0.00   68775/132276      insert [4]
+[8]      1.1    0.01    0.00  132276         hash [8]
+-----------------------------------------------
+                                                 <spontaneous>
+[9]      0.2    0.00    0.00                 main [9]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+                0.00    0.00   62869/62869       lookup_and_delete [2]
+[10]     0.0    0.00    0.00   62869         SortedList_delete [10]
+-----------------------------------------------
+
+
+
+Mutex lock 10k iterations 8 threads 64 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 55.10      0.33     0.33    50756     0.01     0.01  SortedList_lookup
+ 41.75      0.58     0.25    58020     0.00     0.00  SortedList_insert
+  1.67      0.59     0.01    48495     0.00     0.01  lookup_and_delete
+  1.67      0.60     0.01      530     0.02     0.02  SortedList_length
+  0.00      0.60     0.00   112723     0.00     0.00  hash
+  0.00      0.60     0.00    58667     0.00     0.00  insert
+  0.00      0.60     0.00    52443     0.00     0.00  SortedList_delete
+  0.00      0.60     0.00        9     0.00     1.11  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 1.66% of 0.60 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.8    0.00    0.60                 thread_function [1]
+                0.01    0.33   48495/48495       lookup_and_delete [2]
+                0.00    0.25   58667/58667       insert [4]
+                0.00    0.01       8/9           getLength [7]
+-----------------------------------------------
+                0.01    0.33   48495/48495       thread_function [1]
+[2]     56.7    0.01    0.33   48495         lookup_and_delete [2]
+                0.33    0.00   50756/50756       SortedList_lookup [3]
+                0.00    0.00   52494/112723      hash [9]
+                0.00    0.00   52443/52443       SortedList_delete [10]
+-----------------------------------------------
+                0.33    0.00   50756/50756       lookup_and_delete [2]
+[3]     55.0    0.33    0.00   50756         SortedList_lookup [3]
+-----------------------------------------------
+                0.00    0.25   58667/58667       thread_function [1]
+[4]     41.7    0.00    0.25   58667         insert [4]
+                0.25    0.00   58020/58020       SortedList_insert [5]
+                0.00    0.00   60229/112723      hash [9]
+-----------------------------------------------
+                0.25    0.00   58020/58020       insert [4]
+[5]     41.7    0.25    0.00   58020         SortedList_insert [5]
+-----------------------------------------------
+                0.01    0.00     530/530         getLength [7]
+[6]      1.7    0.01    0.00     530         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [8]
+                0.00    0.01       8/9           thread_function [1]
+[7]      1.7    0.00    0.01       9         getLength [7]
+                0.01    0.00     530/530         SortedList_length [6]
+-----------------------------------------------
+                                                 <spontaneous>
+[8]      0.2    0.00    0.00                 main [8]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+                0.00    0.00   52494/112723      lookup_and_delete [2]
+                0.00    0.00   60229/112723      insert [4]
+[9]      0.0    0.00    0.00  112723         hash [9]
+-----------------------------------------------
+                0.00    0.00   52443/52443       lookup_and_delete [2]
+[10]     0.0    0.00    0.00   52443         SortedList_delete [10]
+-----------------------------------------------
+
+
+
+Spin lock 10k iterations 8 threads 1 list
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 48.19    329.53   329.53    80000     4.12     4.34  lookup_and_delete
+ 47.43    653.85   324.33    79995     4.05     4.23  insert
+  2.53    671.14    17.28    78625     0.22     0.22  SortedList_lookup
+  2.02    684.98    13.85    75777     0.18     0.18  SortedList_insert
+  0.01    685.06     0.08        9     8.91    10.02  getLength
+  0.00    685.07     0.01    80000     0.00     0.00  SortedList_delete
+  0.00    685.08     0.01        7     1.43     1.43  SortedList_length
+  0.00    685.08     0.00   158698     0.00     0.00  hash
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.00% of 685.08 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00  685.07                 thread_function [1]
+              329.53   17.29   80000/80000       lookup_and_delete [2]
+              324.33   13.85   79995/79995       insert [3]
+                0.07    0.01       8/9           getLength [6]
+-----------------------------------------------
+              329.53   17.29   80000/80000       thread_function [1]
+[2]     50.6  329.53   17.29   80000         lookup_and_delete [2]
+               17.28    0.00   78625/78625       SortedList_lookup [4]
+                0.01    0.00   80000/80000       SortedList_delete [7]
+                0.00    0.00   79818/158698      hash [10]
+-----------------------------------------------
+              324.33   13.85   79995/79995       thread_function [1]
+[3]     49.4  324.33   13.85   79995         insert [3]
+               13.85    0.00   75777/75777       SortedList_insert [5]
+                0.00    0.00   78880/158698      hash [10]
+-----------------------------------------------
+               17.28    0.00   78625/78625       lookup_and_delete [2]
+[4]      2.5   17.28    0.00   78625         SortedList_lookup [4]
+-----------------------------------------------
+               13.85    0.00   75777/75777       insert [3]
+[5]      2.0   13.85    0.00   75777         SortedList_insert [5]
+-----------------------------------------------
+                0.01    0.00       1/9           main [9]
+                0.07    0.01       8/9           thread_function [1]
+[6]      0.0    0.08    0.01       9         getLength [6]
+                0.01    0.00       7/7           SortedList_length [8]
+-----------------------------------------------
+                0.01    0.00   80000/80000       lookup_and_delete [2]
+[7]      0.0    0.01    0.00   80000         SortedList_delete [7]
+-----------------------------------------------
+                0.01    0.00       7/7           getLength [6]
+[8]      0.0    0.01    0.00       7         SortedList_length [8]
+-----------------------------------------------
+                                                 <spontaneous>
+[9]      0.0    0.00    0.01                 main [9]
+                0.01    0.00       1/9           getLength [6]
+-----------------------------------------------
+                0.00    0.00   78880/158698      insert [3]
+                0.00    0.00   79818/158698      lookup_and_delete [2]
+[10]     0.0    0.00    0.00  158698         hash [10]
+-----------------------------------------------
+
+
+Spinlock 10k iterations 8 threads 2 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 47.60     81.75    81.75    79375     1.03     1.13  lookup_and_delete
+ 43.28    156.08    74.33    79661     0.93     1.03  insert
+  4.65    164.06     7.99    75999     0.11     0.11  SortedList_lookup
+  4.64    172.04     7.98    51819     0.15     0.15  SortedList_insert
+  0.01    172.06     0.02        9     2.23     2.23  getLength
+  0.00    172.06     0.00   154643     0.00     0.00  hash
+  0.00    172.06     0.00    79858     0.00     0.00  SortedList_delete
+  0.00    172.06     0.00       15     0.00     0.00  SortedList_length
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.01% of 172.06 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00  172.05                 thread_function [1]
+               81.75    7.99   79375/79375       lookup_and_delete [2]
+               74.33    7.98   79661/79661       insert [3]
+                0.02    0.00       8/9           getLength [6]
+-----------------------------------------------
+               81.75    7.99   79375/79375       thread_function [1]
+[2]     52.2   81.75    7.99   79375         lookup_and_delete [2]
+                7.99    0.00   75999/75999       SortedList_lookup [4]
+                0.00    0.00   79858/79858       SortedList_delete [9]
+                0.00    0.00   78120/154643      hash [8]
+-----------------------------------------------
+               74.33    7.98   79661/79661       thread_function [1]
+[3]     47.8   74.33    7.98   79661         insert [3]
+                7.98    0.00   51819/51819       SortedList_insert [5]
+                0.00    0.00   76523/154643      hash [8]
+-----------------------------------------------
+                7.99    0.00   75999/75999       lookup_and_delete [2]
+[4]      4.6    7.99    0.00   75999         SortedList_lookup [4]
+-----------------------------------------------
+                7.98    0.00   51819/51819       insert [3]
+[5]      4.6    7.98    0.00   51819         SortedList_insert [5]
+-----------------------------------------------
+                0.00    0.00       1/9           main [7]
+                0.02    0.00       8/9           thread_function [1]
+[6]      0.0    0.02    0.00       9         getLength [6]
+                0.00    0.00      15/15          SortedList_length [10]
+-----------------------------------------------
+                                                 <spontaneous>
+[7]      0.0    0.00    0.00                 main [7]
+                0.00    0.00       1/9           getLength [6]
+-----------------------------------------------
+                0.00    0.00   76523/154643      insert [3]
+                0.00    0.00   78120/154643      lookup_and_delete [2]
+[8]      0.0    0.00    0.00  154643         hash [8]
+-----------------------------------------------
+                0.00    0.00   79858/79858       lookup_and_delete [2]
+[9]      0.0    0.00    0.00   79858         SortedList_delete [9]
+-----------------------------------------------
+                0.00    0.00      15/15          getLength [6]
+[10]     0.0    0.00    0.00      15         SortedList_length [10]
+-----------------------------------------------
+
+
+Spinlock 10k iterations 8 threads 4 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 38.51     14.90    14.90    78632     0.19     0.26  lookup_and_delete
+ 36.44     29.00    14.10    78564     0.18     0.24  insert
+ 13.83     34.35     5.35    73450     0.07     0.07  SortedList_lookup
+ 11.34     38.73     4.39    65050     0.07     0.07  SortedList_insert
+  0.05     38.75     0.02        9     2.23     3.34  getLength
+  0.03     38.76     0.01       35     0.29     0.29  SortedList_length
+  0.00     38.76     0.00   152462     0.00     0.00  hash
+  0.00     38.76     0.00    79131     0.00     0.00  SortedList_delete
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.03% of 38.76 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00   38.76                 thread_function [1]
+               14.90    5.35   78632/78632       lookup_and_delete [2]
+               14.10    4.39   78564/78564       insert [3]
+                0.02    0.01       8/9           getLength [6]
+-----------------------------------------------
+               14.90    5.35   78632/78632       thread_function [1]
+[2]     52.2   14.90    5.35   78632         lookup_and_delete [2]
+                5.35    0.00   73450/73450       SortedList_lookup [4]
+                0.00    0.00   79131/79131       SortedList_delete [10]
+                0.00    0.00   77200/152462      hash [9]
+-----------------------------------------------
+               14.10    4.39   78564/78564       thread_function [1]
+[3]     47.7   14.10    4.39   78564         insert [3]
+                4.39    0.00   65050/65050       SortedList_insert [5]
+                0.00    0.00   75262/152462      hash [9]
+-----------------------------------------------
+                5.35    0.00   73450/73450       lookup_and_delete [2]
+[4]     13.8    5.35    0.00   73450         SortedList_lookup [4]
+-----------------------------------------------
+                4.39    0.00   65050/65050       insert [3]
+[5]     11.3    4.39    0.00   65050         SortedList_insert [5]
+-----------------------------------------------
+                0.00    0.00       1/9           main [8]
+                0.02    0.01       8/9           thread_function [1]
+[6]      0.1    0.02    0.01       9         getLength [6]
+                0.01    0.00      35/35          SortedList_length [7]
+-----------------------------------------------
+                0.01    0.00      35/35          getLength [6]
+[7]      0.0    0.01    0.00      35         SortedList_length [7]
+-----------------------------------------------
+                                                 <spontaneous>
+[8]      0.0    0.00    0.00                 main [8]
+                0.00    0.00       1/9           getLength [6]
+-----------------------------------------------
+                0.00    0.00   75262/152462      insert [3]
+                0.00    0.00   77200/152462      lookup_and_delete [2]
+[9]      0.0    0.00    0.00  152462         hash [9]
+-----------------------------------------------
+                0.00    0.00   79131/79131       lookup_and_delete [2]
+[10]     0.0    0.00    0.00   79131         SortedList_delete [10]
+-----------------------------------------------
+
+
+Spinlock 10k iterations 8 threads 8 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 29.43      2.60     2.60    68931     0.04     0.04  SortedList_lookup
+ 25.02      4.82     2.21    62508     0.04     0.04  SortedList_insert
+ 24.45      6.98     2.16    75747     0.03     0.06  insert
+ 20.94      8.84     1.85    75925     0.02     0.06  lookup_and_delete
+  0.23      8.86     0.02       69     0.29     0.29  SortedList_length
+  0.11      8.87     0.01   150926     0.00     0.00  hash
+  0.00      8.87     0.00    76929     0.00     0.00  SortedList_delete
+  0.00      8.87     0.00        9     0.00     2.23  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.11% of 8.87 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00    8.86                 thread_function [1]
+                1.85    2.61   75925/75925       lookup_and_delete [2]
+                2.16    2.22   75747/75747       insert [3]
+                0.00    0.02       8/9           getLength [7]
+-----------------------------------------------
+                1.85    2.61   75925/75925       thread_function [1]
+[2]     50.3    1.85    2.61   75925         lookup_and_delete [2]
+                2.60    0.00   68931/68931       SortedList_lookup [4]
+                0.01    0.00   76247/150926      hash [8]
+                0.00    0.00   76929/76929       SortedList_delete [10]
+-----------------------------------------------
+                2.16    2.22   75747/75747       thread_function [1]
+[3]     49.4    2.16    2.22   75747         insert [3]
+                2.21    0.00   62508/62508       SortedList_insert [5]
+                0.00    0.00   74679/150926      hash [8]
+-----------------------------------------------
+                2.60    0.00   68931/68931       lookup_and_delete [2]
+[4]     29.4    2.60    0.00   68931         SortedList_lookup [4]
+-----------------------------------------------
+                2.21    0.00   62508/62508       insert [3]
+[5]     25.0    2.21    0.00   62508         SortedList_insert [5]
+-----------------------------------------------
+                0.02    0.00      69/69          getLength [7]
+[6]      0.2    0.02    0.00      69         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [9]
+                0.00    0.02       8/9           thread_function [1]
+[7]      0.2    0.00    0.02       9         getLength [7]
+                0.02    0.00      69/69          SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00   74679/150926      insert [3]
+                0.01    0.00   76247/150926      lookup_and_delete [2]
+[8]      0.1    0.01    0.00  150926         hash [8]
+-----------------------------------------------
+                                                 <spontaneous>
+[9]      0.0    0.00    0.00                 main [9]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+                0.00    0.00   76929/76929       lookup_and_delete [2]
+[10]     0.0    0.00    0.00   76929         SortedList_delete [10]
+-----------------------------------------------
+
+
+Spinlock 10k iterations 8 threads 16 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 40.33      1.26     1.26    60588     0.02     0.02  SortedList_lookup
+ 24.97      2.04     0.78    55888     0.01     0.01  SortedList_insert
+ 17.93      2.60     0.56    70896     0.01     0.02  insert
+ 16.00      3.11     0.50    70393     0.01     0.03  lookup_and_delete
+  0.96      3.14     0.03      133     0.23     0.23  SortedList_length
+  0.00      3.14     0.00   142065     0.00     0.00  hash
+  0.00      3.14     0.00    72567     0.00     0.00  SortedList_delete
+  0.00      3.14     0.00        9     0.00     3.34  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.32% of 3.14 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.9    0.00    3.13                 thread_function [1]
+                0.50    1.26   70393/70393       lookup_and_delete [2]
+                0.56    0.78   70896/70896       insert [3]
+                0.00    0.03       8/9           getLength [7]
+-----------------------------------------------
+                0.50    1.26   70393/70393       thread_function [1]
+[2]     56.2    0.50    1.26   70393         lookup_and_delete [2]
+                1.26    0.00   60588/60588       SortedList_lookup [4]
+                0.00    0.00   72567/72567       SortedList_delete [10]
+                0.00    0.00   71391/142065      hash [9]
+-----------------------------------------------
+                0.56    0.78   70896/70896       thread_function [1]
+[3]     42.8    0.56    0.78   70896         insert [3]
+                0.78    0.00   55888/55888       SortedList_insert [5]
+                0.00    0.00   70674/142065      hash [9]
+-----------------------------------------------
+                1.26    0.00   60588/60588       lookup_and_delete [2]
+[4]     40.3    1.26    0.00   60588         SortedList_lookup [4]
+-----------------------------------------------
+                0.78    0.00   55888/55888       insert [3]
+[5]     24.9    0.78    0.00   55888         SortedList_insert [5]
+-----------------------------------------------
+                0.03    0.00     133/133         getLength [7]
+[6]      1.0    0.03    0.00     133         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [8]
+                0.00    0.03       8/9           thread_function [1]
+[7]      1.0    0.00    0.03       9         getLength [7]
+                0.03    0.00     133/133         SortedList_length [6]
+-----------------------------------------------
+                                                 <spontaneous>
+[8]      0.1    0.00    0.00                 main [8]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+                0.00    0.00   70674/142065      insert [3]
+                0.00    0.00   71391/142065      lookup_and_delete [2]
+[9]      0.0    0.00    0.00  142065         hash [9]
+-----------------------------------------------
+                0.00    0.00   72567/72567       lookup_and_delete [2]
+[10]     0.0    0.00    0.00   72567         SortedList_delete [10]
+-----------------------------------------------
+
+
+Spinlock 10k iterations 8 threads 32 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 34.05      0.52     0.52    55526     0.01     0.01  SortedList_lookup
+ 32.09      1.01     0.49    56826     0.01     0.01  SortedList_insert
+ 17.03      1.27     0.26    61796     0.00     0.01  lookup_and_delete
+ 16.37      1.52     0.25    64756     0.00     0.01  insert
+  0.65      1.53     0.01      254     0.04     0.04  SortedList_length
+  0.00      1.53     0.00   129572     0.00     0.00  hash
+  0.00      1.53     0.00    65021     0.00     0.00  SortedList_delete
+  0.00      1.53     0.00        9     0.00     1.11  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.65% of 1.53 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.9    0.00    1.53                 thread_function [1]
+                0.26    0.52   61796/61796       lookup_and_delete [2]
+                0.25    0.49   64756/64756       insert [3]
+                0.00    0.01       8/9           getLength [7]
+-----------------------------------------------
+                0.26    0.52   61796/61796       thread_function [1]
+[2]     51.0    0.26    0.52   61796         lookup_and_delete [2]
+                0.52    0.00   55526/55526       SortedList_lookup [4]
+                0.00    0.00   65021/65021       SortedList_delete [10]
+                0.00    0.00   63889/129572      hash [9]
+-----------------------------------------------
+                0.25    0.49   64756/64756       thread_function [1]
+[3]     48.4    0.25    0.49   64756         insert [3]
+                0.49    0.00   56826/56826       SortedList_insert [5]
+                0.00    0.00   65683/129572      hash [9]
+-----------------------------------------------
+                0.52    0.00   55526/55526       lookup_and_delete [2]
+[4]     34.0    0.52    0.00   55526         SortedList_lookup [4]
+-----------------------------------------------
+                0.49    0.00   56826/56826       insert [3]
+[5]     32.0    0.49    0.00   56826         SortedList_insert [5]
+-----------------------------------------------
+                0.01    0.00     254/254         getLength [7]
+[6]      0.7    0.01    0.00     254         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [8]
+                0.00    0.01       8/9           thread_function [1]
+[7]      0.7    0.00    0.01       9         getLength [7]
+                0.01    0.00     254/254         SortedList_length [6]
+-----------------------------------------------
+                                                 <spontaneous>
+[8]      0.1    0.00    0.00                 main [8]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+                0.00    0.00   63889/129572      lookup_and_delete [2]
+                0.00    0.00   65683/129572      insert [3]
+[9]      0.0    0.00    0.00  129572         hash [9]
+-----------------------------------------------
+                0.00    0.00   65021/65021       lookup_and_delete [2]
+[10]     0.0    0.00    0.00   65021         SortedList_delete [10]
+-----------------------------------------------
+
+
+
+Spinlock 10k iterations 8 threads 64 lists
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 41.15      0.23     0.23    51099     0.00     0.00  SortedList_insert
+ 39.36      0.45     0.22    47839     0.00     0.00  SortedList_lookup
+ 10.73      0.51     0.06    50171     0.00     0.01  lookup_and_delete
+  7.16      0.55     0.04    54621     0.00     0.00  insert
+  1.79      0.56     0.01      486     0.02     0.02  SortedList_length
+  0.00      0.56     0.00   109892     0.00     0.00  hash
+  0.00      0.56     0.00    55071     0.00     0.00  SortedList_delete
+  0.00      0.56     0.00        9     0.00     1.11  getLength
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 1.78% of 0.56 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.8    0.00    0.56                 thread_function [1]
+                0.06    0.22   50171/50171       lookup_and_delete [2]
+                0.04    0.23   54621/54621       insert [3]
+                0.00    0.01       8/9           getLength [7]
+-----------------------------------------------
+                0.06    0.22   50171/50171       thread_function [1]
+[2]     50.0    0.06    0.22   50171         lookup_and_delete [2]
+                0.22    0.00   47839/47839       SortedList_lookup [5]
+                0.00    0.00   55071/55071       SortedList_delete [10]
+                0.00    0.00   53286/109892      hash [9]
+-----------------------------------------------
+                0.04    0.23   54621/54621       thread_function [1]
+[3]     48.2    0.04    0.23   54621         insert [3]
+                0.23    0.00   51099/51099       SortedList_insert [4]
+                0.00    0.00   56606/109892      hash [9]
+-----------------------------------------------
+                0.23    0.00   51099/51099       insert [3]
+[4]     41.1    0.23    0.00   51099         SortedList_insert [4]
+-----------------------------------------------
+                0.22    0.00   47839/47839       lookup_and_delete [2]
+[5]     39.3    0.22    0.00   47839         SortedList_lookup [5]
+-----------------------------------------------
+                0.01    0.00     486/486         getLength [7]
+[6]      1.8    0.01    0.00     486         SortedList_length [6]
+-----------------------------------------------
+                0.00    0.00       1/9           main [8]
+                0.00    0.01       8/9           thread_function [1]
+[7]      1.8    0.00    0.01       9         getLength [7]
+                0.01    0.00     486/486         SortedList_length [6]
+-----------------------------------------------
+                                                 <spontaneous>
+[8]      0.2    0.00    0.00                 main [8]
+                0.00    0.00       1/9           getLength [7]
+-----------------------------------------------
+                0.00    0.00   53286/109892      lookup_and_delete [2]
+                0.00    0.00   56606/109892      insert [3]
+[9]      0.0    0.00    0.00  109892         hash [9]
+-----------------------------------------------
+                0.00    0.00   55071/55071       lookup_and_delete [2]
+[10]     0.0    0.00    0.00   55071         SortedList_delete [10]
+-----------------------------------------------

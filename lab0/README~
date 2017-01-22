@@ -1,0 +1,30 @@
+README
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+Files Included:
+
+lab0.c:
+The c source code for lab0, reads from file descriptor 0 (stdin) to file descriptor 1 (stdout).
+Complete with four flags:
+--input=[input.txt] - takes a file and redirects file descriptor 0 to that file.
+--output=[output.txt] - takes a file and redirects file descriptor 1 to that file.
+--segfault - causes the program to segfault
+--catch - enables a hander for segfault, that will catch the signal and exit the program.
+
+Makefile:
+A simple make file for lab0 as described in the spec, includes the following targets:
+all: compiles lab0.c into an executable named lab0
+check: runs two tests, one to check if segfault and catch work, the other to check if input
+       and output work. If all is well, it will report all tests as success, with no reported
+       failures.
+clean: removes any files created by Makefile
+dist: creates a tarball with lab0.c and the Makefile
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+Credit:
+
+Piazza discussion has contributed to some of my work, namely "make check" in the Makefile. The
+test cases I use in my Makefile were inspired by the students answer, endorsed by instructor
+Theano Stavrinos.

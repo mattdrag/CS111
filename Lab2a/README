@@ -1,0 +1,62 @@
+UCLA CS111 Project 2a
+Ying Bin Wu
+104485521
+Spring 2016
+
+++++++++++++++
+Files Included
+++++++++++++++
+lab2a.c - C file that contains the source code for the program. It supports the long options --yield, --threads=<# threads>, --iterations=<# iterations>, and --sync=<sync mechanism>
+Makefile - file that makes the program. Can also clean the executable made and also make the submission file.
+README - (this file) describes what I did for project 1b and its limitations/features/testing methodology/etc
+graph1.png - graph of the number of iterations vs the cost per operation
+graph2.png - graph of the number of threads vs the cost per operation for different syncing mechanisms
+
+++++++++
+Features
+++++++++
+My program takes a number of threads to create and a number of iterations each thread should add/subtract from a shared counter.
+The syncing mechanism can be specified by the --sync option.
+It also supports the --yield option which relinquishes the CPU with each iteration.
+
++++++++
+Testing
++++++++
+To test my program, I worked incrementally and tested it as I added new features such as adding support for the --yield option and the --sync option.
+
+++++++++++
+References
+++++++++++
+I refered to my TA, Zhaoxing's notes when doing the project. I also went to Theano's discussion section and referred to her notes when doing the assignment.
+
+++++++++++++++++++++++++++++
+Answers to project questions
+++++++++++++++++++++++++++++
+Q2A.1A:
+	With 1 thread, the program will never result in failure. This is because there is only 1 thread competing for shared resources, thus there is no possibility of a race condition.
+	With more threads, it is more likely that a race condition will occur because multiple threads will be competing for the same resource and without any locking, it can result in race conditions. The more threads, the more likely a race condition will occur.
+	With more iterations, each thread accesses the same shared variable more, thus increasing the likelihood of a race condition and increasing the chances of failure.
+
+Q2A.1B:
+	With less iterations, each thread accesses the same shared variable less, thus decreasing the likelihood of a race condition and thus decreasing the chances of failure.
+
+Q2A.2A:
+	The average cost per operation drops with increasing operations since the thread creation overhead has less of an effect on the cost per operation when the number of operations is greater.
+
+Q2A.2B:
+	We can find the "correct" cost of each operation if we take the limit as the number of operations goes to infinity. In other words, we can use a very large number of iterations, thus reducing the effect that the thread creation overhead has on the cost per operation.
+
+Q2A.2C:
+	The --yield option makes the program run much slower since it relinquishes the CPU upon calling pthread_yield(). The extra time goes into privileged instructions that change the state of the thread from running to ready or ready to running.
+
+Q2A.2D:
+	We cannot get valid timings when using the --yield option. This is because with every iteration, we yield the CPU, thus adding the overhead of switching the state of the CPU in every iteration.
+
+Q2A.3A:
+	With a low number of threads, there is a lower probability that two threads will be competing for the same shared variable at the same time, thus each thread will not to wait long when waiting for a shared resource.
+
+Q2A.3B:
+	As the number of threads increase, more threads are competing for the same resource. Because there are more threads fighting for the same shared resource, each thread will need to wait longer when attempting to update it.
+
+Q2A.3C:
+	Spin locks are expensive for large numbers of threads since each thread will be simply be spinning, thus wasting CPU time when it is waiting for a resource.

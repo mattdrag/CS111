@@ -1,0 +1,33 @@
+UCLA CS111 Project 2c
+Ying Bin Wu
+104485521
+Matt Dragotto
+804472271
+Spring 2016
+
+++++++++++++++
+Files Included
+++++++++++++++
+lab3a.c - C file that contains the source code for the program.
+Makefile - file that makes the program. Can also clean the executable made and also make the submission file.
+README - (this file) describes what I did for project 3a and its limitations/features/testing methodology/etc
+
+++++++++
+Features
+++++++++
+My program takes a file system and produces csv files describing it's superblock, inode, bitmap, directories, indirect blocks, and group descriptor
+
++++++++
+Testing
++++++++
+To test my program, I worked incrementally and tested it as I incrementally implemented the difference csv files.
+
+++++++++++
+References
+++++++++++
+I refered to my TA, Zhaoxing's notes when doing the project. I also went to Theano's discussion section and referred to her notes when doing the assignment.
+
+++++++++++++++++
+Use of Slip Days
+++++++++++++++++
+Since we are using a pool of slip days for the people in this project, Ying Bin would like to use 2 of his slip days and Matthew would like to use 1 of his slip days.

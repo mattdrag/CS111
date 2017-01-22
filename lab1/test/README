@@ -1,0 +1,46 @@
+README
+
+///////////////////////////////////////////////////////////////////////////////\
+/////////////
+
+Files Included:
+
+client.c:
+Runs a simple client that attempts to connect through the port on localhost
+specified by the argument for the --port flag.
+Flags:
+--port=<port>: specify port number to connect on
+--log=<log>: specify a log file to keep track of data sent and recieved across
+the socket
+--encrypt: encrypts data going across the socket and decrypts arriving data
+
+server.c:
+Runs a simple server through the port on localhost specified by the argument
+for the --port flag. Forks another process that executes bash, and passes
+data received from its client to said process through pipes, and then passes
+output from the bash process back to the client.
+Flags:
+--port=<port>: specify port number to run on
+--encrypt: encrypts data going across the socket and decrypts arriving data
+
+Makefile:
+A simple make file for lab1a as described in the spec, includes the following targets:
+all: compiles client.c and server.c into client and server executables
+client: compiles only client.c into the executable client
+server: compiles only server.c into the executable server
+clean: removes any files created by Makefile
+dist: creates a tarball with client.c, server.c, the Makefile, and the README
+
+///////////////////////////////////////////////////////////////////////////////\
+////////////////
+
+Credit:
+
+Socket code was taken from "Sockets Tutorial", by Robert Ingalls. This tutorial
+can be found at the following URL:
+http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html
+
+Mcrypt code was taken from the linux man page on mcrypt, mcrypt(3).
+
+Piazza discussion also helped when handling certain cases, such as ^C, ^D, and exit
+from the terminal.

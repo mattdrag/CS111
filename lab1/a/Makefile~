@@ -1,0 +1,10 @@
+all: lab1a
+
+lab1a: lab1a.c
+	gcc -g -Wall -lpthread lab1a.c -o lab1a
+
+clean:
+	rm -rf *.o lab1a
+
+dist:
+	tar -czvf lab0-804472271.tar.gz lab0.c Makefile README segfault1.png segfault2.png

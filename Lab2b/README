@@ -1,0 +1,49 @@
+UCLA CS111 Project 2a
+Ying Bin Wu
+104485521
+Spring 2016
+
+++++++++++++++
+Files Included
+++++++++++++++
+lab2b.c - C file that contains the source code for the program. It supports the long options --yield=[ids], --threads=<# threads>, --iterations=<# iterations>, and --sync=<sync mechanism>
+SortedList.h - a header file containing the declaration of the Linked list methods: insert, delete, lookup, and length
+SortedList.c - the C file that contains the cource code for the program. It contains the implementations of the insert, delete, lookup, and add function
+Makefile - file that makes the program. Can also clean the executable made and also make the submission file.
+README - (this file) describes what I did for project 1b and its limitations/features/testing methodology/etc
+graph1.png - graph of the number of iterations vs the cost per operation
+graph2.png - graph of the number of threads vs the cost per operation for different syncing mechanisms
+
+++++++++
+Features
+++++++++
+My program takes a number of threads to create and a number of iterations each thread should add/subtract from a shared counter.
+The syncing mechanism can be specified by the --sync option.
+It also supports the --yield option which relinquishes the CPU with each iteration.
+
++++++++
+Testing
++++++++
+To test my program, I worked incrementally and tested it as I added new features such as adding support for the --yield option and the --sync option.
+
+++++++++++
+References
+++++++++++
+I refered to my TA, Zhaoxing's notes when doing the project. I also went to Theano's discussion section and referred to her notes when doing the assignment.
+
+++++++++++++++++++++++++++++
+Answers to project questions
+++++++++++++++++++++++++++++
+Q2B.1A
+The cost per operation starts out relatively high since the cost of thread creation dominates the time in which the operations actually occur.
+As the number of operations increase, it decreases a little then goes back up. The decreasing can be explained since the thread creation cost isn't as big a factor with more iterations. However, if we keep increasing, the cost per operation increases again. This is because each operation runs in linear time. The time it takes for the operation to finish is based on the length of the linked list. Thus with more operations, our linked list is even bigger, leading to more expensive operations.
+
+Q2B.1B
+To correct for this effect, we can divide the cost per operation by the number of iterations. This works since the cost per operation increases linearly since it has runtime O(n). If we want to calculate a constant runtime, we can divide the time it takes by the number of operations.
+
+Q2B.2A
+The difference can be attributed to four things.
+Firstly, the critical section of the list is greater than the critical section of the add function.
+Secondly, because the critical section of the list is greater, the lock is held much longer in the list than it is for the add function.
+Thirdly, the probabilty of conflict is much higher for the same number of threads due to the locks being held much longer
+Lastly, more conflicts leads to more blocked threads, which means more overhead and less parallelism.

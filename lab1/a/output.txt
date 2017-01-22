@@ -1,0 +1,6 @@
+ls
+lab1a
+Makefile
+Makefile~
+output.txt
+README
